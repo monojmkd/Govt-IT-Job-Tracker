@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import axios from "axios";
 import "./App.css";
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
+// Supabase REST via axios — no supabase-js, no fetch issues
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const db = axios.create({
+  baseURL: `${SUPABASE_URL}/rest/v1`,
+  headers: {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+  },
+});
 
 // ── AI Job Finder Panel ──────────────────────────────────────────────
 function AIJobFinder({ jobs }) {
@@ -185,28 +192,32 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("jobs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data, error }) => {
-        if (error) console.error(error);
-        else setJobs(data || []);
+    db.get("/jobs", {
+      params: { select: "*", order: "created_at.desc", limit: 50 },
+    })
+      .then((res) => {
+        setJobs(res.data || []);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    const { data, error } = await supabase
-      .from("jobs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (error) console.error(error);
-    else setJobs(data || []);
-    setRefreshing(false);
+    try {
+      const res = await db.get("/jobs", {
+        params: { select: "*", order: "created_at.desc", limit: 50 },
+      });
+      setJobs(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const filtered = jobs.filter((j) =>
