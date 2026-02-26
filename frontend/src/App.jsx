@@ -2,18 +2,6 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-// Supabase REST via axios — no supabase-js, no fetch issues
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const db = axios.create({
-  baseURL: `${SUPABASE_URL}/rest/v1`,
-  headers: {
-    apikey: SUPABASE_KEY,
-    Authorization: `Bearer ${SUPABASE_KEY}`,
-  },
-});
-
 // ── AI Job Finder Panel ──────────────────────────────────────────────
 function AIJobFinder({ jobs }) {
   const [query, setQuery] = useState("");
@@ -36,9 +24,9 @@ function AIJobFinder({ jobs }) {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
 
-  // TODO: wire up AI matching to Supabase Edge Function
+  // TODO: wire up AI matching
   const runAI = () => {
-    // coming soon
+    /* coming soon */
   };
 
   return (
@@ -115,11 +103,9 @@ function AIJobFinder({ jobs }) {
               {results.matches?.length ?? 0} found
             </span>
           </div>
-
           {results.summary && (
             <div className="ai-summary">{results.summary}</div>
           )}
-
           {results.matches?.length === 0 && (
             <div className="ai-empty">
               <div className="ai-empty-icon">◻</div>
@@ -130,7 +116,6 @@ function AIJobFinder({ jobs }) {
               </div>
             </div>
           )}
-
           {results.matches?.map((match, i) => (
             <div
               key={match.id ?? i}
@@ -166,7 +151,6 @@ function AIJobFinder({ jobs }) {
               </div>
             </div>
           ))}
-
           <div style={{ height: 8 }} />
         </>
       )}
@@ -191,15 +175,15 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  // Calls /api/jobs — Vercel serverless function on prod, proxied locally
   useEffect(() => {
-    db.get("/jobs", {
-      params: { select: "*", order: "created_at.desc", limit: 50 },
-    })
+    axios
+      .get("/api/jobs")
       .then((res) => {
         setJobs(res.data || []);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Failed to fetch jobs:", err.message);
       })
       .finally(() => {
         setLoading(false);
@@ -209,12 +193,10 @@ export default function App() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const res = await db.get("/jobs", {
-        params: { select: "*", order: "created_at.desc", limit: 50 },
-      });
+      const res = await axios.get("/api/jobs");
       setJobs(res.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Refresh failed:", err.message);
     } finally {
       setRefreshing(false);
     }
@@ -231,131 +213,129 @@ export default function App() {
     : "—";
 
   return (
-    <>
-      <div className="app">
-        <header className="header">
-          <div className="header-left">
-            <span className="eyebrow">Dashboard / Jobs</span>
-            <h1>
-              Govt <span>IT</span> Tracker
-            </h1>
-          </div>
-          <div className="badge">
-            <span className="badge-dot" />
-            Live Feed
-          </div>
-        </header>
-
-        <div className="stats-bar">
-          <div className="stat">
-            <div className="stat-label">Total Listings</div>
-            <div className="stat-value">{jobs.length}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Filtered Results</div>
-            <div className="stat-value">{filtered.length}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Latest Posting</div>
-            <div className="stat-value" style={{ fontSize: 14, paddingTop: 4 }}>
-              {newestJob}
-            </div>
-          </div>
+    <div className="app">
+      <header className="header">
+        <div className="header-left">
+          <span className="eyebrow">Dashboard / Jobs</span>
+          <h1>
+            Govt <span>IT</span> Tracker
+          </h1>
         </div>
+        <div className="badge">
+          <span className="badge-dot" />
+          Live Feed
+        </div>
+      </header>
 
-        <div className="main-layout">
-          {/* Left: Job Table */}
-          <div>
-            <div className="table-container">
-              <div className="table-toolbar">
-                <span className="toolbar-title">All Positions</span>
-                <div className="search-box">
-                  <span className="search-icon">⌕</span>
-                  <input
-                    placeholder="Search jobs..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 44 }}>#</th>
-                    <th>Position Title</th>
-                    <th>Link</th>
-                    <th>Posted</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr className="loading-row">
-                      <td colSpan={4}>
-                        <span className="spinner" />
-                        Fetching jobs...
-                      </td>
-                    </tr>
-                  ) : filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={4}>
-                        <div className="empty-state">
-                          <div className="empty-state-icon">◻</div>
-                          <p>No jobs found</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.map((job, i) => (
-                      <tr key={job.id}>
-                        <td className="row-num">
-                          {String(i + 1).padStart(2, "0")}
-                        </td>
-                        <td className="job-title">{job.title}</td>
-                        <td className="job-link">
-                          <a
-                            href={job.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            View ↗
-                          </a>
-                        </td>
-                        <td className="job-date">
-                          {new Date(job.created_at).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="footer">
-              <span className="footer-text">Source: Supabase</span>
-              <button
-                className={`refresh-btn ${refreshing ? "spinning" : ""}`}
-                onClick={handleRefresh}
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
+      <div className="stats-bar">
+        <div className="stat">
+          <div className="stat-label">Total Listings</div>
+          <div className="stat-value">{jobs.length}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Filtered Results</div>
+          <div className="stat-value">{filtered.length}</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Latest Posting</div>
+          <div className="stat-value" style={{ fontSize: 14, paddingTop: 4 }}>
+            {newestJob}
           </div>
-
-          {/* Right: AI Panel */}
-          <AIJobFinder jobs={jobs} />
         </div>
       </div>
-    </>
+
+      <div className="main-layout">
+        {/* Left: Job Table */}
+        <div>
+          <div className="table-container">
+            <div className="table-toolbar">
+              <span className="toolbar-title">All Positions</span>
+              <div className="search-box">
+                <span className="search-icon">⌕</span>
+                <input
+                  placeholder="Search jobs..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 44 }}>#</th>
+                  <th>Position Title</th>
+                  <th>Link</th>
+                  <th>Posted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr className="loading-row">
+                    <td colSpan={4}>
+                      <span className="spinner" />
+                      Fetching jobs...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>
+                      <div className="empty-state">
+                        <div className="empty-state-icon">◻</div>
+                        <p>No jobs found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((job, i) => (
+                    <tr key={job.id}>
+                      <td className="row-num">
+                        {String(i + 1).padStart(2, "0")}
+                      </td>
+                      <td className="job-title">{job.title}</td>
+                      <td className="job-link">
+                        <a
+                          href={job.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View ↗
+                        </a>
+                      </td>
+                      <td className="job-date">
+                        {new Date(job.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="footer">
+            <span className="footer-text">Source: Supabase</span>
+            <button
+              className={`refresh-btn ${refreshing ? "spinning" : ""}`}
+              onClick={handleRefresh}
+            >
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Right: AI Panel */}
+        <AIJobFinder jobs={jobs} />
+      </div>
+    </div>
   );
 }
