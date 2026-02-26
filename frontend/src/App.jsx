@@ -11,9 +11,9 @@ const supabase = createClient(
 function AIJobFinder({ jobs }) {
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState([]);
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [results] = useState(null);
+  const [loading] = useState(false);
+  const [error] = useState(null);
 
   const quickFilters = [
     "IT",
@@ -33,145 +33,149 @@ function AIJobFinder({ jobs }) {
   const runAI = () => {
     // coming soon
   };
-}
 
-return (
-  <div className="ai-panel">
-    <div className="ai-panel-header">
-      <div className="ai-icon">✦</div>
-      <div className="ai-panel-title-group">
-        <div className="ai-panel-title">AI Job Finder</div>
-        <div className="ai-panel-sub">Powered by Claude</div>
-      </div>
-    </div>
-
-    <div className="ai-panel-body">
-      <div className="ai-field">
-        <label>What are you looking for?</label>
-        <textarea
-          rows={2}
-          placeholder="e.g. IT roles in North East India, research positions requiring PhD..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+  return (
+    <div className="ai-panel">
+      <div className="ai-panel-header">
+        <div className="ai-icon">✦</div>
+        <div className="ai-panel-title-group">
+          <div className="ai-panel-title">AI Job Finder</div>
+          <div className="ai-panel-sub">Powered by Claude</div>
+        </div>
       </div>
 
-      <div className="ai-field">
-        <label>Quick Filters</label>
-        <div className="ai-tags">
-          {quickFilters.map((tag) => (
-            <span
-              key={tag}
-              className={`ai-tag ${activeTags.includes(tag) ? "active" : ""}`}
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
+      <div className="ai-panel-body">
+        <div className="ai-field">
+          <label>What are you looking for?</label>
+          <textarea
+            rows={2}
+            placeholder="e.g. IT roles in North East India, research positions requiring PhD..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="ai-field">
+          <label>Quick Filters</label>
+          <div className="ai-tags">
+            {quickFilters.map((tag) => (
+              <span
+                key={tag}
+                className={`ai-tag ${activeTags.includes(tag) ? "active" : ""}`}
+                onClick={() => toggleTag(tag)}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <button
+          className="ai-run-btn"
+          onClick={runAI}
+          disabled={loading || !jobs.length}
+        >
+          {loading ? (
+            <>
+              <span className="spinner" style={{ marginRight: 0 }} />
+              Analysing...
+            </>
+          ) : (
+            <>✦ Find Matching Jobs</>
+          )}
+        </button>
+      </div>
+
+      <div className="ai-divider" />
+
+      {loading && (
+        <div className="ai-thinking">
+          <div className="ai-thinking-ring" />
+          <div className="ai-thinking-text">
+            Scanning {jobs.length} listings
+            <span className="ai-thinking-dots" />
+          </div>
+        </div>
+      )}
+
+      {error && !loading && <div className="ai-error">⚠ {error}</div>}
+
+      {results && !loading && (
+        <>
+          <div className="ai-result-header">
+            <span className="ai-result-label">AI Matches</span>
+            <span className="ai-result-count">
+              {results.matches?.length ?? 0} found
             </span>
-          ))}
-        </div>
-      </div>
-
-      <button
-        className="ai-run-btn"
-        onClick={runAI}
-        disabled={loading || !jobs.length}
-      >
-        {loading ? (
-          <>
-            <span className="spinner" style={{ marginRight: 0 }} />
-            Analysing...
-          </>
-        ) : (
-          <>✦ Find Matching Jobs</>
-        )}
-      </button>
-    </div>
-
-    <div className="ai-divider" />
-
-    {loading && (
-      <div className="ai-thinking">
-        <div className="ai-thinking-ring" />
-        <div className="ai-thinking-text">
-          Scanning {jobs.length} listings
-          <span className="ai-thinking-dots" />
-        </div>
-      </div>
-    )}
-
-    {error && !loading && <div className="ai-error">⚠ {error}</div>}
-
-    {results && !loading && (
-      <>
-        <div className="ai-result-header">
-          <span className="ai-result-label">AI Matches</span>
-          <span className="ai-result-count">
-            {results.matches?.length ?? 0} found
-          </span>
-        </div>
-
-        {results.summary && <div className="ai-summary">{results.summary}</div>}
-
-        {results.matches?.length === 0 && (
-          <div className="ai-empty">
-            <div className="ai-empty-icon">◻</div>
-            <div className="ai-empty-text">
-              No strong matches found.
-              <br />
-              Try a different query.
-            </div>
           </div>
-        )}
 
-        {results.matches?.map((match, i) => (
-          <div
-            key={match.id ?? i}
-            className="ai-job-card"
-            style={{ animationDelay: `${i * 0.07}s` }}
-          >
-            <div className="ai-job-card-title">{match.title}</div>
-            <div className="ai-job-card-reason">{match.reason}</div>
-            <div className="ai-job-card-footer">
-              <div className="ai-match-score">
-                <div className="ai-score-bar">
-                  <div
-                    className="ai-score-fill"
-                    style={{ width: `${match.score ?? 0}%` }}
-                  />
-                </div>
-                <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}>
-                  {match.score}%
-                </span>
+          {results.summary && (
+            <div className="ai-summary">{results.summary}</div>
+          )}
+
+          {results.matches?.length === 0 && (
+            <div className="ai-empty">
+              <div className="ai-empty-icon">◻</div>
+              <div className="ai-empty-text">
+                No strong matches found.
+                <br />
+                Try a different query.
               </div>
-              {match.link && (
-                <a
-                  href={match.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ai-view-link"
-                >
-                  View ↗
-                </a>
-              )}
             </div>
+          )}
+
+          {results.matches?.map((match, i) => (
+            <div
+              key={match.id ?? i}
+              className="ai-job-card"
+              style={{ animationDelay: `${i * 0.07}s` }}
+            >
+              <div className="ai-job-card-title">{match.title}</div>
+              <div className="ai-job-card-reason">{match.reason}</div>
+              <div className="ai-job-card-footer">
+                <div className="ai-match-score">
+                  <div className="ai-score-bar">
+                    <div
+                      className="ai-score-fill"
+                      style={{ width: `${match.score ?? 0}%` }}
+                    />
+                  </div>
+                  <span
+                    style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}
+                  >
+                    {match.score}%
+                  </span>
+                </div>
+                {match.link && (
+                  <a
+                    href={match.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ai-view-link"
+                  >
+                    View ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <div style={{ height: 8 }} />
+        </>
+      )}
+
+      {!loading && !results && !error && (
+        <div className="ai-empty">
+          <div className="ai-empty-icon">✦</div>
+          <div className="ai-empty-text">
+            Describe what you're looking for and AI will match the best jobs
+            from your live feed.
           </div>
-        ))}
-
-        <div style={{ height: 8 }} />
-      </>
-    )}
-
-    {!loading && !results && !error && (
-      <div className="ai-empty">
-        <div className="ai-empty-icon">✦</div>
-        <div className="ai-empty-text">
-          Describe what you're looking for and AI will match the best jobs from
-          your live feed.
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+}
 
 // ── Main App ─────────────────────────────────────────────────────────
 export default function App() {
@@ -180,19 +184,17 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchJobs = async () => {
-    const { data, error } = await supabase
+  useEffect(() => {
+    supabase
       .from("jobs")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(50);
-    if (error) console.error(error);
-    else setJobs(data || []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchJobs();
+      .limit(50)
+      .then(({ data, error }) => {
+        if (error) console.error(error);
+        else setJobs(data || []);
+        setLoading(false);
+      });
   }, []);
 
   const handleRefresh = async () => {
