@@ -1,0 +1,19 @@
+// app.js
+
+const express = require("express");
+const cors = require("cors");
+
+const jobRoutes = require("./routes/job.routes");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("Govt Job Tracker API Running");
+});
+
+app.use("/api/jobs", jobRoutes);
+
+module.exports = app;
