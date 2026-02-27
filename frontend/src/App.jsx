@@ -174,6 +174,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   // Calls /api/jobs — Vercel serverless function on prod, proxied locally
   useEffect(() => {
@@ -205,6 +207,9 @@ export default function App() {
   const filtered = jobs.filter((j) =>
     j.title?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const newestJob = jobs.length
     ? new Date(
@@ -255,7 +260,10 @@ export default function App() {
                 <input
                   placeholder="Search jobs..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                 />
               </div>
             </div>
@@ -288,10 +296,13 @@ export default function App() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((job, i) => (
+                  paginated.map((job, i) => (
                     <tr key={job.id}>
                       <td className="row-num col-num">
-                        {String(i + 1).padStart(2, "0")}
+                        {String((page - 1) * PAGE_SIZE + i + 1).padStart(
+                          2,
+                          "0",
+                        )}
                       </td>
                       <td className="job-title">{job.title}</td>
                       <td className="job-link">
@@ -312,6 +323,28 @@ export default function App() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ← Prev
+              </button>
+              <span className="page-info">
+                {page} / {totalPages}
+              </span>
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
 
           <div className="footer">
             <span className="footer-text">Source: Supabase</span>

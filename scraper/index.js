@@ -51,8 +51,6 @@ const TITLE_KEYWORDS = [
   "web developer",
   "technical",
   "tech support",
-  "hardware",
-  "helpdesk",
 ];
 
 const TITLE_SKIP = ["gate", "contractual", "apprentice"];
