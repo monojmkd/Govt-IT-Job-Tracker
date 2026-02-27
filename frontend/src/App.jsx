@@ -35,7 +35,7 @@ function AIJobFinder({ jobs }) {
         <div className="ai-icon">✦</div>
         <div className="ai-panel-title-group">
           <div className="ai-panel-title">AI Job Finder</div>
-          <div className="ai-panel-sub">Powered by Claude</div>
+          <div className="ai-panel-sub">Powered by AI</div>
         </div>
       </div>
 
@@ -262,10 +262,12 @@ export default function App() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 44 }}>#</th>
+                  <th style={{ width: 44 }} className="col-num">
+                    #
+                  </th>
                   <th>Position Title</th>
                   <th>Link</th>
-                  <th>Posted</th>
+                  <th className="col-date">Posted</th>
                 </tr>
               </thead>
               <tbody>
@@ -288,7 +290,7 @@ export default function App() {
                 ) : (
                   filtered.map((job, i) => (
                     <tr key={job.id}>
-                      <td className="row-num">
+                      <td className="row-num col-num">
                         {String(i + 1).padStart(2, "0")}
                       </td>
                       <td className="job-title">{job.title}</td>
@@ -301,7 +303,7 @@ export default function App() {
                           View ↗
                         </a>
                       </td>
-                      <td className="job-date">
+                      <td className="job-date col-date">
                         {new Date(job.created_at).toLocaleString()}
                       </td>
                     </tr>
