@@ -39,8 +39,6 @@ const TITLE_KEYWORDS = [
   "developer",
   "programmer",
   "data entry",
-  "cse",
-  "mca",
   "b.tech",
   "information technology",
   "system admin",
@@ -52,9 +50,72 @@ const TITLE_KEYWORDS = [
   "tech support",
   "hardware",
   "helpdesk",
+  // Bank/PSU IT roles
+  "specialist officer",
+  "it officer",
+  "data scientist",
+  "data engineer",
+  "cloud",
+  "devops",
+  "devsecops",
+  "linux",
+  "java developer",
+  "android developer",
+  "ios developer",
+  "mobile developer",
 ];
 
 const TITLE_SKIP = ["gate", "contractual", "apprentice"];
+
+// Keywords to check in page body when title doesn't match
+// Broader than title keywords — catches "Various Posts" / "Specialist Officer" type titles
+const BODY_IT_KEYWORDS = [
+  "engineer",
+  "systems",
+  "b-tech",
+  "software developer",
+  "software engineer",
+  "web developer",
+  "mobile developer",
+  "android developer",
+  "ios developer",
+  "java developer",
+  ".net developer",
+  "database administrator",
+  "dba",
+  "network administrator",
+  "network engineer",
+  "system administrator",
+  "cloud engineer",
+  "cloud architect",
+  "devops engineer",
+  "devsecops",
+  "data scientist",
+  "data engineer",
+  "data analyst",
+  "bi developer",
+  "cybersecurity",
+  "cyber security",
+  "information security",
+  "it officer",
+  "it department",
+  "it specialist",
+  "it manager",
+  "it infrastructure",
+  "linux administrator",
+  "windows administrator",
+  "storage administrator",
+  "computer science",
+  "information technology",
+  "b.tech",
+  "b.e.",
+  "mca",
+  "cse",
+  "programming",
+  "python",
+  "java",
+  "c++",
+];
 
 // Experience patterns to detect in page body — skip if found
 // Matches: "2 years", "3+ years", "five years experience", "minimum 2 years" etc.
@@ -137,14 +198,18 @@ async function fetchPageInfo(url) {
     });
     const $ = cheerio.load(res.data);
     const bodyText = $("body").text();
+    const lower = bodyText.toLowerCase();
     const date = extractLastDate(bodyText);
     const tooMuchExp = hasExcessiveExperience(bodyText);
+    // Check if body contains IT-related keywords (fallback for generic titles)
+    const bodyHasIT = BODY_IT_KEYWORDS.some((k) => lower.includes(k));
     return {
       lastDate: date ? date.toISOString().split("T")[0] : null,
       skip: tooMuchExp,
+      bodyHasIT,
     };
   } catch {
-    return { lastDate: null, skip: false };
+    return { lastDate: null, skip: false, bodyHasIT: false };
   }
 }
 
@@ -204,13 +269,61 @@ async function scrape() {
       if (!item.link || !item.title) continue;
       totalChecked++;
 
-      if (!titleIsRelevant(item.title)) {
-        console.log(`   ⏭️  Skip: ${item.title}`);
-        totalSkipped++;
+      const titleMatch = titleIsRelevant(item.title);
+
+      if (!titleMatch) {
+        // Title didn't match — fetch page body as fallback check
+        console.log(`   🔍 Title no match, checking page: ${item.title}`);
+        const { lastDate, skip, bodyHasIT } = await fetchPageInfo(item.link);
+        if (!bodyHasIT) {
+          console.log(`   ⏭️  Skip (no IT content in page): ${item.title}`);
+          totalSkipped++;
+          await sleep(1500);
+          continue;
+        }
+        if (skip) {
+          console.log(`   🚫 Skip (2+ yrs exp required): ${item.title}`);
+          totalSkipped++;
+          await sleep(1500);
+          continue;
+        }
+        console.log(`   ✅ Body match: ${item.title}`);
+        if (lastDate) console.log(`      📅 ${lastDate}`);
+        // Fall through to save
+        try {
+          const res = await db.post(
+            "/jobs",
+            {
+              title: item.title,
+              link: item.link,
+              source: rssUrl,
+              last_date: lastDate,
+              is_relevant: true,
+            },
+            {
+              headers: {
+                Prefer: "resolution=ignore-duplicates,return=representation",
+              },
+            },
+          );
+          if (res.data && res.data.length > 0) {
+            totalSaved++;
+            console.log(`      💾 Saved!`);
+          } else {
+            totalDupes++;
+            console.log(`      ↩️  Already exists`);
+          }
+        } catch (err) {
+          console.error(
+            `      ❌ Insert error:`,
+            err.response?.data ?? err.message,
+          );
+        }
+        await sleep(1500);
         continue;
       }
 
-      console.log(`   ✅ Match: ${item.title}`);
+      console.log(`   ✅ Title match: ${item.title}`);
       const { lastDate, skip } = await fetchPageInfo(item.link);
       if (skip) {
         console.log(`   🚫 Skip (2+ yrs exp required): ${item.title}`);
