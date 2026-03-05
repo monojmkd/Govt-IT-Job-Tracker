@@ -30,17 +30,17 @@ const parser = new Parser();
 const RSS_URLS = [
   "https://www.mysarkarinaukri.com/rss.xml",
   "https://assam.20govt.com/feed/",
-  "https://feedproxy.google.com/sarkari-naukri"
+  "https://feedproxy.google.com/sarkari-naukri",
 ];
 
 const TITLE_KEYWORDS = [
   "computer",
   "software",
   "it ",
-  "i.t",
+  "IT Officer",
   "developer",
   "programmer",
-  "data entry",
+  "Specialist Officer",
   "cse",
   "mca",
   "b.tech",
@@ -51,7 +51,7 @@ const TITLE_KEYWORDS = [
   "database",
   "web developer",
   "technical",
-  "tech support",
+  "Software Developer",
 ];
 
 const TITLE_SKIP = ["gate", "contractual", "apprentice"];
