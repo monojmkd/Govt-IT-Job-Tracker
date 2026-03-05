@@ -275,20 +275,21 @@ export default function App() {
                   </th>
                   <th>Position Title</th>
                   <th>Link</th>
+                  <th className="col-last-date">Last Date</th>
                   <th className="col-date">Posted</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr className="loading-row">
-                    <td colSpan={4}>
+                    <td colSpan={5}>
                       <span className="spinner" />
                       Fetching jobs...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>
+                    <td colSpan={5}>
                       <div className="empty-state">
                         <div className="empty-state-icon">◻</div>
                         <p>No jobs found</p>
@@ -313,6 +314,15 @@ export default function App() {
                         >
                           View ↗
                         </a>
+                      </td>
+                      <td className="job-last-date col-last-date">
+                        {job.last_date ? (
+                          <span className="last-date-badge">
+                            {job.last_date}
+                          </span>
+                        ) : (
+                          <span className="last-date-na">—</span>
+                        )}
                       </td>
                       <td className="job-date col-date">
                         {new Date(job.created_at).toLocaleString()}
