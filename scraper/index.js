@@ -30,6 +30,7 @@ const parser = new Parser();
 const RSS_URLS = [
   "https://www.mysarkarinaukri.com/rss.xml",
   "https://assam.20govt.com/feed/",
+  "https://feedproxy.google.com/sarkari-naukri"
 ];
 
 const TITLE_KEYWORDS = [
