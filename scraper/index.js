@@ -56,6 +56,31 @@ const TITLE_KEYWORDS = [
 
 const TITLE_SKIP = ["gate", "contractual", "apprentice"];
 
+// Experience patterns to detect in page body — skip if found
+// Matches: "2 years", "3+ years", "five years experience", "minimum 2 years" etc.
+const EXPERIENCE_REGEX = /(\d+)\s*\+?\s*years?\s*(of\s*)?(experience|exp)/gi;
+const EXPERIENCE_WORDS = [
+  "2 years",
+  "3 years",
+  "4 years",
+  "5 years",
+  "6 years",
+  "7 years",
+  "two years",
+  "three years",
+  "four years",
+  "five years",
+  "minimum 2",
+  "minimum 3",
+  "minimum 4",
+  "minimum 5",
+  "at least 2",
+  "at least 3",
+  "2+ years",
+  "3+ years",
+  "4+ years",
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -80,17 +105,33 @@ function extractLastDate(text) {
   return null;
 }
 
-async function fetchLastDate(url) {
+function hasExcessiveExperience(text) {
+  const lower = text.toLowerCase();
+  // Check plain keyword phrases
+  if (EXPERIENCE_WORDS.some((k) => lower.includes(k))) return true;
+  // Check patterns like "2 years experience", "3+ yrs exp"
+  const matches = [
+    ...lower.matchAll(/(\d+)\s*\+?\s*years?\s*(of\s*)?(experience|exp)/g),
+  ];
+  return matches.some((m) => parseInt(m[1]) >= 2);
+}
+
+async function fetchPageInfo(url) {
   try {
     const res = await axios.get(url, {
       timeout: 12000,
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
     });
     const $ = cheerio.load(res.data);
-    const date = extractLastDate($("body").text());
-    return date ? date.toISOString().split("T")[0] : null;
+    const bodyText = $("body").text();
+    const date = extractLastDate(bodyText);
+    const tooMuchExp = hasExcessiveExperience(bodyText);
+    return {
+      lastDate: date ? date.toISOString().split("T")[0] : null,
+      skip: tooMuchExp,
+    };
   } catch {
-    return null;
+    return { lastDate: null, skip: false };
   }
 }
 
@@ -157,7 +198,12 @@ async function scrape() {
       }
 
       console.log(`   ✅ Match: ${item.title}`);
-      const lastDate = await fetchLastDate(item.link);
+      const { lastDate, skip } = await fetchPageInfo(item.link);
+      if (skip) {
+        console.log(`   🚫 Skip (2+ yrs exp required): ${item.title}`);
+        totalSkipped++;
+        continue;
+      }
       if (lastDate) console.log(`      📅 ${lastDate}`);
 
       try {
