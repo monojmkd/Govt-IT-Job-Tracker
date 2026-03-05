@@ -18,8 +18,8 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const db = axios.create({
   baseURL: `${SUPABASE_URL}/rest/v1`,
   headers: {
-    apikey: SUPABASE_KEY,
-    Authorization: `Bearer ${SUPABASE_KEY}`,
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${SUPABASE_KEY}`,
     "Content-Type": "application/json",
   },
 });
@@ -30,28 +30,13 @@ const parser = new Parser();
 const RSS_URLS = [
   "https://www.mysarkarinaukri.com/rss.xml",
   "https://assam.20govt.com/feed/",
-  "https://feedproxy.google.com/sarkari-naukri",
 ];
 
 const TITLE_KEYWORDS = [
-  "computer",
-  "software",
-  "it ",
-  "IT Officer",
-  "developer",
-  "programmer",
-  "Specialist Officer",
-  "cse",
-  "mca",
-  "b.tech",
-  "information technology",
-  "system admin",
-  "network",
-  "cyber",
-  "database",
-  "web developer",
-  "technical",
-  "Software Developer",
+  "computer", "software", "developer", "programmer",
+  "data entry", "cse", "mca", "b.tech", "information technology",
+  "system admin", "network", "cyber", "database", "web developer",
+  "technical", "tech support", "hardware", "helpdesk",
 ];
 
 const TITLE_SKIP = ["gate", "contractual", "apprentice"];
@@ -60,34 +45,31 @@ const TITLE_SKIP = ["gate", "contractual", "apprentice"];
 // Matches: "2 years", "3+ years", "five years experience", "minimum 2 years" etc.
 const EXPERIENCE_REGEX = /(\d+)\s*\+?\s*years?\s*(of\s*)?(experience|exp)/gi;
 const EXPERIENCE_WORDS = [
-  "2 years",
-  "3 years",
-  "4 years",
-  "5 years",
-  "6 years",
-  "7 years",
-  "two years",
-  "three years",
-  "four years",
-  "five years",
-  "minimum 2",
-  "minimum 3",
-  "minimum 4",
-  "minimum 5",
-  "at least 2",
-  "at least 3",
-  "2+ years",
-  "3+ years",
-  "4+ years",
+  "2 years", "3 years", "4 years", "5 years", "6 years", "7 years",
+  "two years", "three years", "four years", "five years",
+  "minimum 2", "minimum 3", "minimum 4", "minimum 5",
+  "at least 2", "at least 3", "2+ years", "3+ years", "4+ years",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Wrap short/ambiguous keywords in word boundary regex
+const WORD_BOUNDARY_KEYWORDS = [
+  "\bit\b",       // "IT" as standalone word — won't match "IIT" or "digital"
+  "\bi\.t\b",    // "I.T" standalone
+  "\bcse\b",      // "CSE" standalone
+  "\bmca\b",      // "MCA" standalone
+];
+
 function titleIsRelevant(title) {
   const lower = title.toLowerCase();
   if (TITLE_SKIP.some((k) => lower.includes(k))) return false;
-  return TITLE_KEYWORDS.some((k) => lower.includes(k));
+  // Check plain keywords
+  if (TITLE_KEYWORDS.some((k) => lower.includes(k))) return true;
+  // Check word-boundary keywords (won't false-match inside other words)
+  if (WORD_BOUNDARY_KEYWORDS.some((pattern) => new RegExp(pattern).test(lower))) return true;
+  return false;
 }
 
 function extractLastDate(text) {
@@ -110,9 +92,7 @@ function hasExcessiveExperience(text) {
   // Check plain keyword phrases
   if (EXPERIENCE_WORDS.some((k) => lower.includes(k))) return true;
   // Check patterns like "2 years experience", "3+ yrs exp"
-  const matches = [
-    ...lower.matchAll(/(\d+)\s*\+?\s*years?\s*(of\s*)?(experience|exp)/g),
-  ];
+  const matches = [...lower.matchAll(/(\d+)\s*\+?\s*years?\s*(of\s*)?(experience|exp)/g)];
   return matches.some((m) => parseInt(m[1]) >= 2);
 }
 
@@ -170,10 +150,7 @@ async function scrape() {
   await testConnection();
   await cleanup();
 
-  let totalChecked = 0,
-    totalSkipped = 0,
-    totalSaved = 0,
-    totalDupes = 0;
+  let totalChecked = 0, totalSkipped = 0, totalSaved = 0, totalDupes = 0;
 
   for (const rssUrl of RSS_URLS) {
     console.log(`📡 Fetching RSS: ${rssUrl}`);
@@ -217,10 +194,8 @@ async function scrape() {
             is_relevant: true,
           },
           {
-            headers: {
-              Prefer: "resolution=ignore-duplicates,return=representation",
-            },
-          },
+            headers: { "Prefer": "resolution=ignore-duplicates,return=representation" },
+          }
         );
 
         if (res.data && res.data.length > 0) {
@@ -231,10 +206,7 @@ async function scrape() {
           console.log(`      ↩️  Already exists`);
         }
       } catch (err) {
-        console.error(
-          `      ❌ Insert error:`,
-          err.response?.data ?? err.message,
-        );
+        console.error(`      ❌ Insert error:`, err.response?.data ?? err.message);
       }
 
       await sleep(1500);
